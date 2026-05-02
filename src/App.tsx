@@ -12,6 +12,7 @@ export default function App() {
     chat,
     selectedCategories,
     selectedTransaction,
+    branchHistory,
     loading,
     error,
     bootstrap,
@@ -27,9 +28,14 @@ export default function App() {
   }, [bootstrap]);
 
   const transactions = envelope?.active_state.transactions ?? [];
+  const connections = envelope?.active_state.connections ?? [];
   const filteredTransactions = useMemo(
     () => transactions.filter((transaction) => selectedCategories.includes(transaction.type)),
     [selectedCategories, transactions]
+  );
+  const filteredConnections = useMemo(
+    () => connections.filter((connection) => selectedCategories.includes(connection.type)),
+    [connections, selectedCategories]
   );
 
   const keySignals = useMemo(() => {
@@ -85,6 +91,7 @@ export default function App() {
           <div className="map-wrapper">
             <AtlasDualGlobes
               transactions={filteredTransactions}
+              connections={filteredConnections}
               selectedTransaction={selectedTransaction}
               futureMode={Boolean(envelope?.future_mode)}
               onSelectTransaction={setSelectedTransaction}
@@ -142,6 +149,20 @@ export default function App() {
                 <p className="muted-line">
                   Click any marker or transaction row to inspect the event and source.
                 </p>
+              )}
+            </div>
+
+            <div className="panel-card">
+              <h3>Saved branches</h3>
+              {branchHistory.length === 0 ? (
+                <p className="muted-line">No local branch snapshots yet.</p>
+              ) : (
+                branchHistory.slice(0, 4).map((entry) => (
+                  <div key={entry.id} className="signal-line">
+                    <span>{entry.state.branch_name}</span>
+                    <strong>{entry.state.transactions.length} events</strong>
+                  </div>
+                ))
               )}
             </div>
           </div>

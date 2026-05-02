@@ -7,10 +7,11 @@ import { feature } from "topojson-client";
 import land110m from "world-atlas/land-110m.json";
 import countries110m from "world-atlas/countries-110m.json";
 
-import type { Transaction } from "../types";
+import type { ConnectionLine, Transaction } from "../types";
 
 interface AtlasDualGlobesProps {
   transactions: Transaction[];
+  connections: ConnectionLine[];
   selectedTransaction: Transaction | null;
   futureMode: boolean;
   onSelectTransaction: (transaction: Transaction | null) => void;
@@ -225,10 +226,52 @@ function MarkerGlyph({
   );
 }
 
+function buildArcPoints(
+  fromLoc: [number, number],
+  toLoc: [number, number],
+  radius: number,
+  intensity: number
+) {
+  const [fromLat, fromLng] = fromLoc;
+  const [toLat, toLng] = toLoc;
+  const start = lonLatToVector3(fromLng, fromLat, radius + 0.012);
+  const end = lonLatToVector3(toLng, toLat, radius + 0.012);
+  const midpoint = start.clone().add(end).multiplyScalar(0.5).normalize();
+  const elevation = radius * (0.18 + intensity * 0.018);
+  const control = midpoint.multiplyScalar(radius + elevation);
+  const curve = new THREE.QuadraticBezierCurve3(start, control, end);
+  return curve.getPoints(40);
+}
+
+function ConnectionRoute({
+  connection,
+  radius
+}: {
+  connection: ConnectionLine;
+  radius: number;
+}) {
+  const accent = CATEGORY_ACCENTS[connection.type] ?? WHITE;
+  const points = useMemo(
+    () => buildArcPoints(connection.from_loc, connection.to_loc, radius, connection.intensity),
+    [connection.from_loc, connection.intensity, connection.to_loc, radius]
+  );
+
+  return (
+    <Line
+      points={points}
+      color={accent}
+      transparent
+      opacity={0.42 + connection.intensity * 0.04}
+      lineWidth={1 + connection.intensity * 0.08}
+    />
+  );
+}
+
 function GlobeWireLayer({
   radius,
   rotationY,
   transactions,
+  connections,
   selectedTransaction,
   onSelectTransaction,
   controlsEnabled = true
@@ -236,6 +279,7 @@ function GlobeWireLayer({
   radius: number;
   rotationY: number;
   transactions: Transaction[];
+  connections: ConnectionLine[];
   selectedTransaction: Transaction | null;
   onSelectTransaction: (transaction: Transaction) => void;
   controlsEnabled?: boolean;
@@ -313,6 +357,10 @@ function GlobeWireLayer({
           />
         ))}
 
+        {connections.map((connection) => (
+          <ConnectionRoute key={`${radius}-${connection.id}`} connection={connection} radius={radius} />
+        ))}
+
         {transactions.map((transaction) => (
           <MarkerGlyph
             key={`${radius}-${transaction.id}`}
@@ -345,6 +393,7 @@ function GlobeViewport({
   radius,
   rotationY,
   transactions,
+  connections,
   selectedTransaction,
   onSelectTransaction,
   mini = false
@@ -354,6 +403,7 @@ function GlobeViewport({
   radius: number;
   rotationY: number;
   transactions: Transaction[];
+  connections: ConnectionLine[];
   selectedTransaction: Transaction | null;
   onSelectTransaction: (transaction: Transaction) => void;
   mini?: boolean;
@@ -370,6 +420,7 @@ function GlobeViewport({
           radius={radius}
           rotationY={rotationY}
           transactions={transactions}
+          connections={connections}
           selectedTransaction={selectedTransaction}
           onSelectTransaction={onSelectTransaction}
           controlsEnabled
@@ -458,6 +509,7 @@ function PlateProjection({
 
 export function AtlasDualGlobes({
   transactions,
+  connections,
   selectedTransaction,
   futureMode,
   onSelectTransaction
@@ -476,6 +528,7 @@ export function AtlasDualGlobes({
           radius={MAIN_RADIUS}
           rotationY={WESTERN_ROTATION}
           transactions={transactions}
+          connections={connections}
           selectedTransaction={selectedTransaction}
           onSelectTransaction={onSelectTransaction}
         />
@@ -485,6 +538,7 @@ export function AtlasDualGlobes({
           radius={MAIN_RADIUS}
           rotationY={EASTERN_ROTATION}
           transactions={transactions}
+          connections={connections}
           selectedTransaction={selectedTransaction}
           onSelectTransaction={onSelectTransaction}
         />
@@ -497,6 +551,7 @@ export function AtlasDualGlobes({
           radius={MINI_RADIUS}
           rotationY={SOUTH_POLAR_ROTATION}
           transactions={transactions}
+          connections={connections}
           selectedTransaction={selectedTransaction}
           onSelectTransaction={onSelectTransaction}
           mini
@@ -514,6 +569,7 @@ export function AtlasDualGlobes({
           radius={MINI_RADIUS}
           rotationY={NORTH_POLAR_ROTATION}
           transactions={transactions}
+          connections={connections}
           selectedTransaction={selectedTransaction}
           onSelectTransaction={onSelectTransaction}
           mini

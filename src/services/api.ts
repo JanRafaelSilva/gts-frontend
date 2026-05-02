@@ -1,6 +1,12 @@
 import type { Category, ChatResponse, StateEnvelope } from "../types";
 
-const API_BASE = import.meta.env.VITE_API_BASE ?? "http://localhost:8000/api";
+const API_ROOT = (import.meta.env.VITE_API_URL ?? "").replace(/\/+$/, "");
+
+if (!API_ROOT) {
+  throw new Error("Missing VITE_API_URL environment variable.");
+}
+
+const API_BASE = `${API_ROOT}/api`;
 
 async function handleResponse<T>(response: Response): Promise<T> {
   if (!response.ok) {

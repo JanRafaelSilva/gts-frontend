@@ -15,11 +15,26 @@ export interface Transaction {
   branch: string;
 }
 
+export interface ConnectionLine {
+  id: string;
+  type: Category;
+  from_loc: [number, number];
+  to_loc: [number, number];
+  desc: string;
+  intensity: number;
+  source_title: string;
+  source_url: string;
+  created_at: string;
+  branch: string;
+  tags: string[];
+}
+
 export interface WorldState {
   branch_name: string;
   mode: SimulationMode;
   updated_at: string;
   transactions: Transaction[];
+  connections: ConnectionLine[];
   notes: string[];
 }
 
